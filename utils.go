@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"strconv"
 )
 
@@ -19,4 +21,14 @@ func genHelp(title string, items map[string]string) string {
 		help += fmt.Sprintf("%-"+strconv.Itoa(maxlen+8)+"s%s\n", key, items[key])
 	}
 	return help
+}
+
+func TrapSignal(f func(sig os.Signal), sigs ...os.Signal) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, sigs...)
+	go func() {
+		for sig := range sigCh {
+			f(sig)
+		}
+	}()
 }

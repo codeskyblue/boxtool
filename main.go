@@ -5,9 +5,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/bobappleyard/readline"
+	"github.com/codeskyblue/readline" // a fork version in order to support windows
 	"github.com/franela/goreq"
 	"github.com/gobuild/goyaml"
 )
@@ -78,10 +79,13 @@ func cmdInfo() {
 	d := respInfo.Data
 	fmt.Printf("Host: %s\n", d.Host)
 	fmt.Printf("Author: %s\n", d.Author)
-	fmt.Println("Proxy engine started...")
-	for _, p := range d.Proxies {
-		fmt.Printf("\tlocalhost:%d --> %s:%d\n", p.LocalPort, d.Host, p.RemotePort)
-	}
+	// for _, p := range d.Proxies {
+	// 	fmt.Printf("\tlocalhost:%d --> %s:%d\n", p.LocalPort, d.Host, p.RemotePort)
+	// }
+}
+
+func cmdQuit() {
+	os.Exit(0)
 }
 
 func main() {
@@ -89,11 +93,20 @@ func main() {
 	fmt.Printf("Welcome to serverbox console\n\ndriver:%s\n", cfg.Driver)
 	prefix := fmt.Sprintf(">> [box] %s@%s(%s) $ ",
 		respInfo.Data.Author, respInfo.Data.Host, respInfo.Data.Description)
-	p, err := NewProxy(":2022", "localhost:32200")
-	if err != nil {
-		log.Fatal(err)
+	d := respInfo.Data
+
+	fmt.Println("Proxy engine started...")
+	proxies := make([]*Proxy, 0, len(d.Proxies))
+	for _, p := range d.Proxies {
+		px, err := NewProxy(fmt.Sprintf(":%d", p.LocalPort), fmt.Sprintf("%s:%d", d.Host, p.RemotePort))
+		if err != nil {
+			log.Fatal(err)
+		}
+		proxies = append(proxies, px)
+		fmt.Printf("\tstart localhost:%d --> %s:%d\n", p.LocalPort, d.Host, p.RemotePort)
+		go px.ListenAndServe()
 	}
-	go p.ListenAndServe()
+
 	for {
 		l, err := readline.String(prefix)
 		if err != nil {
@@ -108,16 +121,21 @@ func main() {
 				"h,help":     "Show help information",
 				"ns,netstat": "Show netstat info",
 				"info":       "show basic infomation",
+				"exit":       "exit program",
 			}))
 		case "ns", "netstat":
-			fmt.Printf("%d bytes send, %d bytes received\n", p.sentBytes, p.receivedBytes)
+			println("netstat")
+			for _, px := range proxies {
+				fmt.Printf("[%v]: %d bytes send, %d bytes received\n", px.laddr, px.sentBytes, px.receivedBytes)
+			}
 		case "info":
 			cmdInfo()
+		case "exit", "quit":
+			cmdQuit()
 		default:
 			fmt.Printf("- %s: command not found, type help for more information\n", l)
 			continue
 		}
 		readline.AddHistory(l)
 	}
-	println("hello")
 }
