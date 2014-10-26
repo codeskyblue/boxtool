@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gobuild/log"
 
@@ -23,12 +24,16 @@ var cfg struct {
 	Server string `goyaml:"server"`
 }
 
-var respInfo *RespInfo
-var ftpuse = filepath.Join(SelfDir(), "ftpuse/ftpuse.exe")
+var (
+	respInfo    *RespInfo
+	ftpuse      = filepath.Join(SelfDir(), "ftpuse/ftpuse.exe")
+	httpTimeout = 3000 * time.Millisecond
+)
 
 func HttpCall(serv string) (*RespBasic, error) {
 	res, err := goreq.Request{
-		Uri: fmt.Sprintf("http://%s/api/%s", cfg.Server, strings.TrimPrefix(serv, "/")),
+		Uri:     fmt.Sprintf("http://%s/api/%s", cfg.Server, strings.TrimPrefix(serv, "/")),
+		Timeout: httpTimeout,
 	}.Do()
 	if err != nil {
 		return nil, err
@@ -40,7 +45,8 @@ func HttpCall(serv string) (*RespBasic, error) {
 
 func HttpCall2(serv string, data interface{}) error {
 	res, err := goreq.Request{
-		Uri: fmt.Sprintf("http://%s/api/%s", cfg.Server, strings.TrimPrefix(serv, "/")),
+		Uri:     fmt.Sprintf("http://%s/api/%s", cfg.Server, strings.TrimPrefix(serv, "/")),
+		Timeout: httpTimeout,
 	}.Do()
 	if err != nil {
 		return err
@@ -96,15 +102,12 @@ func cmdMount(args ...string) {
 		d.Host+"/"+d.Ftp.Path,
 		fmt.Sprintf("/PORT:%d", d.Ftp.Port)).Run()
 	if err != nil {
-		log.Fatalf("Mount failed to %s: %s", cfg.Driver, err)
+		log.Printf("Mount failed to %s: %s", cfg.Driver, err)
 	}
 }
 
 func cmdUnmount(args ...string) {
 	sh.Command(ftpuse, cfg.Driver, "/DELETE").Run()
-}
-func cmdQuit() {
-	os.Exit(0)
 }
 
 func cmdServCtrl(action string) {
@@ -113,9 +116,20 @@ func cmdServCtrl(action string) {
 		log.Println(err)
 		return
 	}
-	fmt.Printf("Status: %d", ri.Status)
+	fmt.Printf("Status: %d\n", ri.Status)
 	fmt.Println(ri.Message)
 }
+
+func cmdCodeCtrl(action string) {
+	ri, err := HttpCall(filepath.Join("/codectl", action, cfg.Uid))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Printf("Status: %d\n", ri.Status)
+	fmt.Println(ri.Message)
+}
+
 func main() {
 	cmdInfo()
 	prefix := fmt.Sprintf(">> [box] %s@%s(%s) $ ",
@@ -164,6 +178,9 @@ func main() {
 				"mount,m":        "Mount ftp to local driver",
 				"unmount":        "Unmount ftp driver",
 				"reload,restart": "Service control",
+				"update,up":      "Update code(svn)",
+				"revert,rv":      "Revert code(svn)",
+				"status,st":      "Status code(svn)",
 			}))
 		case "ns", "netstat":
 			for _, px := range proxies {
@@ -175,10 +192,12 @@ func main() {
 			cmdUnmount(args[1:]...)
 		case "i", "info":
 			cmdInfo()
-		case "exit", "quit":
-			cmdQuit()
 		case "reload", "restart":
 			cmdServCtrl(args[0])
+		case "status", "st", "update", "up", "revert", "rv":
+			cmdCodeCtrl(args[0])
+		case "exit", "quit":
+			os.Exit(0)
 		default:
 			fmt.Printf("- %s: command not found, type help for more information\n", l)
 			continue
