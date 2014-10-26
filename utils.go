@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"sort"
 	"strconv"
 )
 
@@ -17,6 +19,7 @@ func genHelp(title string, items map[string]string) string {
 		}
 	}
 	help := title + "\n"
+	sort.Strings(keys)
 	for _, key := range keys {
 		help += fmt.Sprintf("%-"+strconv.Itoa(maxlen+8)+"s%s\n", key, items[key])
 	}
@@ -31,4 +34,8 @@ func TrapSignal(f func(sig os.Signal), sigs ...os.Signal) {
 			f(sig)
 		}
 	}()
+}
+
+func SelfDir() string {
+	return filepath.Dir(os.Args[0])
 }

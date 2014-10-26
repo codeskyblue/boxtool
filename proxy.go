@@ -72,14 +72,14 @@ func (p *ProxyConn) start() {
 	p.rconn.SetNoDelay(true)
 
 	//display both ends
-	log.Printf("Opened %s >>> %s", p.lconn.RemoteAddr().String(), p.rconn.RemoteAddr().String())
+	// log.Printf("Opened %s >>> %s", p.lconn.RemoteAddr().String(), p.rconn.RemoteAddr().String())
 	//bidirectional copy
 	ch1 := p.pipe(p.lconn, p.rconn)
 	ch2 := p.pipe(p.rconn, p.lconn)
 	//wait for close...
 	<-ch1
 	<-ch2
-	log.Printf("Closed (%d bytes sent, %d bytes recieved)", p.sentBytes, p.receivedBytes)
+	// log.Printf("Closed (%d bytes sent, %d bytes recieved)", p.sentBytes, p.receivedBytes)
 }
 
 func (p *ProxyConn) pipe(src, dst *net.TCPConn) chan error {

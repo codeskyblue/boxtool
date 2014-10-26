@@ -15,5 +15,9 @@ type RespInfo struct {
 			LocalPort  int `json:"lport"`
 			RemotePort int `json:"rport"`
 		} `json:"proxies"`
+		Ftp struct {
+			Path string `json:"path"`
+			Port int    `json:"port"`
+		} `json:"ftp"`
 	} `json:"data"`
 }

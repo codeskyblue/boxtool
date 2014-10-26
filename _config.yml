@@ -1,9 +1,9 @@
 ---
 # copy uid from web
-uid: 951f9ee02b925b5ceda88eaf9fe44736213e929c7b6787e33a7864cf8f0058f8
+uid: 1618162aa19ee0a34d4b575ae303f77111f154245aca4c91f99aff91dba56d62
 
 # mount as driver 
-driver: X
+driver: "X:"
 
 # server address
 server: 10.246.14.51:5001

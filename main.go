@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/gobuild/log"
+
+	"github.com/codeskyblue/go-sh"
 	"github.com/codeskyblue/readline" // a fork version in order to support windows
 	"github.com/franela/goreq"
 	"github.com/gobuild/goyaml"
+	"github.com/kballard/go-shellquote"
 )
 
 var cfg struct {
@@ -20,6 +24,7 @@ var cfg struct {
 }
 
 var respInfo *RespInfo
+var ftpuse = filepath.Join(SelfDir(), "ftpuse/ftpuse.exe")
 
 func HttpCall(serv string) (*RespBasic, error) {
 	res, err := goreq.Request{
@@ -77,36 +82,60 @@ func init() {
 
 func cmdInfo() {
 	d := respInfo.Data
-	fmt.Printf("Host: %s\n", d.Host)
 	fmt.Printf("Author: %s\n", d.Author)
-	// for _, p := range d.Proxies {
-	// 	fmt.Printf("\tlocalhost:%d --> %s:%d\n", p.LocalPort, d.Host, p.RemotePort)
-	// }
+	fmt.Printf("Description: %s\n", d.Description)
+	fmt.Printf("Host: %s\n", d.Host)
+	fmt.Printf("Ftp: ftp://%s:%d/%s\n", d.Host, d.Ftp.Port, d.Ftp.Path)
 }
 
+func cmdMount(args ...string) {
+	d := respInfo.Data
+
+	fmt.Printf("\nMount ftp to %s\n", cfg.Driver)
+	err := sh.Command(ftpuse, cfg.Driver,
+		d.Host+"/"+d.Ftp.Path,
+		fmt.Sprintf("/PORT:%d", d.Ftp.Port)).Run()
+	if err != nil {
+		log.Fatalf("Mount failed to %s: %s", cfg.Driver, err)
+	}
+}
+
+func cmdUnmount(args ...string) {
+	sh.Command(ftpuse, cfg.Driver, "/DELETE").Run()
+}
 func cmdQuit() {
 	os.Exit(0)
 }
 
+func cmdServCtrl(action string) {
+	ri, err := HttpCall(filepath.Join("/servctl", action, cfg.Uid))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Printf("Status: %d", ri.Status)
+	fmt.Println(ri.Message)
+}
 func main() {
 	cmdInfo()
-	fmt.Printf("Welcome to serverbox console\n\ndriver:%s\n", cfg.Driver)
 	prefix := fmt.Sprintf(">> [box] %s@%s(%s) $ ",
 		respInfo.Data.Author, respInfo.Data.Host, respInfo.Data.Description)
+	prefix = ">>> "
 	d := respInfo.Data
 
 	fmt.Println("Proxy engine started...")
 	proxies := make([]*Proxy, 0, len(d.Proxies))
 	for _, p := range d.Proxies {
-		px, err := NewProxy(fmt.Sprintf(":%d", p.LocalPort), fmt.Sprintf("%s:%d", d.Host, p.RemotePort))
+		px, err := NewProxy(fmt.Sprintf("localhost:%d", p.LocalPort), fmt.Sprintf("%s:%d", d.Host, p.RemotePort))
 		if err != nil {
 			log.Fatal(err)
 		}
 		proxies = append(proxies, px)
-		fmt.Printf("\tstart localhost:%d --> %s:%d\n", p.LocalPort, d.Host, p.RemotePort)
+		fmt.Printf("\t%v --> %v\n", px.laddr, px.raddr)
 		go px.ListenAndServe()
 	}
 
+	fmt.Printf("\nWelcome to serverbox console\n\n")
 	for {
 		l, err := readline.String(prefix)
 		if err != nil {
@@ -115,23 +144,41 @@ func main() {
 			}
 			break
 		}
-		switch l {
+
+		args, err := shellquote.Split(l)
+		if err != nil {
+			log.Println("shellquote", err)
+			continue
+		}
+		if len(args) == 0 {
+			continue
+		}
+
+		switch args[0] {
 		case "h", "help":
 			fmt.Println(genHelp("Usage:", map[string]string{
-				"h,help":     "Show help information",
-				"ns,netstat": "Show netstat info",
-				"info":       "show basic infomation",
-				"exit":       "exit program",
+				"help,h":         "Show help information",
+				"netstat,ns":     "Show netstat info",
+				"info,i":         "Show basic infomation",
+				"quit,exit":      "Exit program",
+				"mount,m":        "Mount ftp to local driver",
+				"unmount":        "Unmount ftp driver",
+				"reload,restart": "Service control",
 			}))
 		case "ns", "netstat":
-			println("netstat")
 			for _, px := range proxies {
 				fmt.Printf("[%v]: %d bytes send, %d bytes received\n", px.laddr, px.sentBytes, px.receivedBytes)
 			}
-		case "info":
+		case "m", "mount":
+			cmdMount(args[1:]...)
+		case "unmount":
+			cmdUnmount(args[1:]...)
+		case "i", "info":
 			cmdInfo()
 		case "exit", "quit":
 			cmdQuit()
+		case "reload", "restart":
+			cmdServCtrl(args[0])
 		default:
 			fmt.Printf("- %s: command not found, type help for more information\n", l)
 			continue
