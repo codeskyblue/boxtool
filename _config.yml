@@ -1,3 +1,9 @@
 ---
+# copy uid from web
+uid: 951f9ee02b925b5ceda88eaf9fe44736213e929c7b6787e33a7864cf8f0058f8
+
+# mount as driver 
 driver: X
-server: mt.nie.netease.com:5000
+
+# server address
+server: 10.246.14.51:5001
