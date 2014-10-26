@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobuild/log"
+	"github.com/qiniu/log"
 
 	"github.com/codeskyblue/go-sh"
 	"github.com/codeskyblue/readline" // a fork version in order to support windows
@@ -83,6 +83,9 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if respInfo.Status != 0 {
+		log.Fatal(respInfo.Message)
+	}
 	fmt.Println("connected\n")
 }
 
@@ -111,7 +114,7 @@ func cmdUnmount(args ...string) {
 }
 
 func cmdServCtrl(action string) {
-	ri, err := HttpCall(filepath.Join("/servctl", action, cfg.Uid))
+	ri, err := HttpCall("/codectl/" + action + "/" + cfg.Uid)
 	if err != nil {
 		log.Println(err)
 		return
@@ -121,7 +124,7 @@ func cmdServCtrl(action string) {
 }
 
 func cmdCodeCtrl(action string) {
-	ri, err := HttpCall(filepath.Join("/codectl", action, cfg.Uid))
+	ri, err := HttpCall("/codectl/" + action + "/" + cfg.Uid)
 	if err != nil {
 		log.Println(err)
 		return
