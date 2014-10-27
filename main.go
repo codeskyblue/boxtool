@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,8 +25,9 @@ var cfg struct {
 }
 
 var (
-	respInfo    *RespInfo
-	FTPUSE      = "ftpuse"
+	respInfo *RespInfo
+	// FTPUSE      = "ftpuse"
+	FTPUSE      = filepath.Join(SelfDir(), "ftpuse", "ftpuse.exe")
 	httpTimeout = 3000 * time.Millisecond
 )
 
@@ -89,16 +89,19 @@ func init() {
 	}
 	fmt.Println("connected\n")
 
-	if _, err = exec.LookPath(FTPUSE); err != nil {
-		fmt.Println("ftpuse not found in %PATH%, start check C:\\..")
-		ftpusePath := filepath.Join(`C:\Program Files\FERRO Software\FtpUse`, "ftpuse")
-		if Exists(ftpusePath) {
-			fmt.Println("Use C:\\...ftpuse")
-			FTPUSE = ftpusePath
-		} else {
-			fmt.Println("ftpuse not found.")
-		}
-	}
+	// ftpusePath, err := exec.LookPath(FTPUSE)
+	// if err != nil {
+	// 	fmt.Println("ftpuse not found in %PATH%, start check C:\\..")
+	// 	ftpusePath = filepath.Join(`C:\Program Files\FERRO Software\FtpUse`, "ftpuse")
+	// 	if Exists(ftpusePath) {
+	// 		fmt.Println("Use C:\\...ftpuse")
+	// 		FTPUSE = ftpusePath
+	// 	} else {
+	// 		fmt.Println("ftpuse not found.")
+	// 	}
+	// } else {
+	// 	FTPUSE = ftpusePath
+	// }
 }
 
 func cmdInfo() {
