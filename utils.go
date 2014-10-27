@@ -39,3 +39,12 @@ func TrapSignal(f func(sig os.Signal), sigs ...os.Signal) {
 func SelfDir() string {
 	return filepath.Dir(os.Args[0])
 }
+
+func Exists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}

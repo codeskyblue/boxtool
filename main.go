@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ var cfg struct {
 
 var (
 	respInfo    *RespInfo
-	ftpuse      = filepath.Join(SelfDir(), "ftpuse/ftpuse.exe")
+	FTPUSE      = "ftpuse"
 	httpTimeout = 3000 * time.Millisecond
 )
 
@@ -87,6 +88,17 @@ func init() {
 		log.Fatal(respInfo.Message)
 	}
 	fmt.Println("connected\n")
+
+	if _, err = exec.LookPath(FTPUSE); err != nil {
+		fmt.Println("ftpuse not found in %PATH%, start check C:\\..")
+		ftpusePath := filepath.Join(`C:\Program Files\FERRO Software\FtpUse`, "ftpuse")
+		if Exists(ftpusePath) {
+			fmt.Println("Use C:\\...ftpuse")
+			FTPUSE = ftpusePath
+		} else {
+			fmt.Println("ftpuse not found.")
+		}
+	}
 }
 
 func cmdInfo() {
@@ -101,7 +113,7 @@ func cmdMount(args ...string) {
 	d := respInfo.Data
 
 	fmt.Printf("\nMount ftp to %s\n", cfg.Driver)
-	err := sh.Command(ftpuse, cfg.Driver,
+	err := sh.Command(FTPUSE, cfg.Driver,
 		d.Host+"/"+d.Ftp.Path,
 		fmt.Sprintf("/PORT:%d", d.Ftp.Port)).Run()
 	if err != nil {
@@ -110,7 +122,7 @@ func cmdMount(args ...string) {
 }
 
 func cmdUnmount(args ...string) {
-	sh.Command(ftpuse, cfg.Driver, "/DELETE").Run()
+	sh.Command(FTPUSE, cfg.Driver, "/DELETE").Run()
 }
 
 func cmdServCtrl(action string) {
