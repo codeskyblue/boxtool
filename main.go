@@ -129,7 +129,7 @@ func cmdUnmount(args ...string) {
 }
 
 func cmdServCtrl(action string) {
-	ri, err := HttpCall("/codectl/" + action + "/" + cfg.Uid)
+	ri, err := HttpCall("/servctl/" + action + "/" + cfg.Uid)
 	if err != nil {
 		log.Println(err)
 		return
