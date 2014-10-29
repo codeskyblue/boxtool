@@ -158,13 +158,17 @@ func main() {
 	fmt.Println("Proxy engine started...")
 	proxies := make([]*Proxy, 0, len(d.Proxies))
 	for _, p := range d.Proxies {
-		px, err := NewProxy(fmt.Sprintf("localhost:%d", p.LocalPort), fmt.Sprintf("%s:%d", d.Host, p.RemotePort))
+		px, err := NewProxy(fmt.Sprintf("0.0.0.0:%d", p.LocalPort), fmt.Sprintf("%s:%d", d.Host, p.RemotePort))
 		if err != nil {
 			log.Fatal(err)
 		}
 		proxies = append(proxies, px)
 		fmt.Printf("\t%v --> %v\n", px.laddr, px.raddr)
-		go px.ListenAndServe()
+		go func() {
+			if err := px.ListenAndServe(); err != nil {
+				log.Println(err)
+			}
+		}()
 	}
 
 	fmt.Printf("\nWelcome to serverbox console\n\n")
